@@ -74,9 +74,9 @@ public class UserDTO {
     public String toString() {
         return "UserDTO{" +
                "id=" + id +
-               ", name='" + name + ''' +
-               ", role='" + role + ''' +
-               ", email='" + email + ''' + // Include new field in toString
+               ", name='" + name + "' " +
+               ", role='" + role + "' " +
+               ", email='" + email + "' " +
                '}';
     }
 }
