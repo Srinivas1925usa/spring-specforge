@@ -29,7 +29,7 @@ public class UserService {
      * Finds a user by their unique identifier.
      *
      * @param userId The unique identifier of the user.
-     * @return A UserDTO containing the user's id, name, and role.
+     * @return A UserDTO containing the user's id, name, role, and email.
      * @throws UserNotFoundException if no user with the specified ID is found.
      */
     @Transactional(readOnly = true) // Optimize for read-only operations
@@ -42,7 +42,8 @@ public class UserService {
 
     /**
      * Maps a User entity to a UserDTO.
-     * This method ensures that only allowed fields are exposed in the API response.
+     * This method ensures that only allowed fields are exposed in the API response,
+     * now including the user's email.
      *
      * @param user The User entity to map.
      * @return A UserDTO representation of the user.
@@ -52,7 +53,7 @@ public class UserService {
         dto.setId(user.getId());
         dto.setName(user.getName());
         dto.setRole(user.getRole());
-        // Other fields like 'email' are intentionally not mapped to the DTO
+        dto.setEmail(user.getEmail()); // Map the email field to the DTO
         return dto;
     }
 }
