@@ -84,9 +84,9 @@ public class ErrorResponse {
         return "ErrorResponse{" +
                "timestamp=" + timestamp +
                ", status=" + status +
-               ", error='" + error + ''' +
-               ", message='" + message + ''' +
-               ", path='" + path + ''' +
+               ", error='" + error + "' " +
+               ", message='" + message + "' " +
+               ", path='" + path + "' " +
                '}';
     }
 }

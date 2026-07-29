@@ -62,8 +62,8 @@ public class UserDTO {
     public String toString() {
         return "UserDTO{" +
                "id=" + id +
-               ", name='" + name + ''' +
-               ", role='" + role + ''' +
+               ", name='" + name + "' " +
+               ", role='" + role + "' " +
                '}';
     }
 }
