@@ -108,11 +108,11 @@ public class UserResponseDTO {
     public String toString() {
         return "UserResponseDTO{" +
                "id=" + id +
-               ", name='" + name + ''' +
-               ", role='" + role + ''' +
-               ", email='" + email + ''' +
-               ", deptno=" + deptno +
-               ", deptname='" + deptname + ''' +
+                ", name='" + name + '\'' +
+                ", role='" + role + '\'' +
+                ", email='" + email + '\'' +
+                ", deptno=" + deptno +
+                ", deptname='" + deptname + '\'' +
                '}';
     }
 }
