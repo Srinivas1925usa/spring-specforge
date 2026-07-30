@@ -119,6 +119,6 @@ public class User {
                 ", role='" + role + '\'' +
                 ", email='" + email + '\'' +
                ", department=" + (department != null ? department.getDeptname() : "null") + // Avoid loading lazy relationship
-               '}';
+               ", department=" + (department != null && org.hibernate.Hibernate.isInitialized(department) ? department.getDeptname() : "null") +
     }
 }
