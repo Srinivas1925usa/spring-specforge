@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -13,6 +14,16 @@ import java.util.Optional;
  */
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+
+    /**
+     * Retrieves all users, eagerly fetching the associated Department.
+     * Prevents LazyInitializationException when serializing users with open-in-view disabled.
+     *
+     * @return A list of all User entities with their departments loaded.
+     */
+    @Override
+    @EntityGraph(attributePaths = "department")
+    List<User> findAll();
 
     /**
      * Retrieves a user by their ID, eagerly fetching the associated Department.
