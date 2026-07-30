@@ -101,9 +101,9 @@ public class UserDTO {
     @Override
     public String toString() {
         return "UserDTO{" +
-               "name='" + name + ''' +
-               ", role='" + role + ''' +
-               ", email='" + email + ''' +
+                "name='" + name + '\'' +
+                ", role='" + role + '\'' +
+                ", email='" + email + '\'' +
                ", deptno=" + deptno +
                '}';
     }
