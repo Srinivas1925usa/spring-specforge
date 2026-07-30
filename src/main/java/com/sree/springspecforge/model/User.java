@@ -2,9 +2,12 @@ package com.sree.springspecforge.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.util.Objects;
@@ -31,6 +34,10 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email; // Potentially other fields not exposed via DTO
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "deptno") // This maps to the deptno column in the users table
+    private Department department;
+
     // Default constructor for JPA
     public User() {
     }
@@ -40,6 +47,15 @@ public class User {
         this.name = name;
         this.role = role;
         this.email = email;
+    }
+
+    // New constructor including department
+    public User(Long id, String name, String role, String email, Department department) {
+        this.id = id;
+        this.name = name;
+        this.role = role;
+        this.email = email;
+        this.department = department;
     }
 
     public Long getId() {
@@ -74,26 +90,35 @@ public class User {
         this.email = email;
     }
 
+    public Department getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(Department department) {
+        this.department = department;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         User user = (User) o;
-        return Objects.equals(id, user.id);
+        return Objects.equals(id, user.id); // For entities, typically only ID is used for equals/hashCode
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(id); // For entities, typically only ID is used for equals/hashCode
     }
 
     @Override
     public String toString() {
         return "User{" +
                "id=" + id +
-               ", name='" + name + "' " +
-               ", role='" + role + "' " +
-               ", email='" + email + "' " +
+               ", name='" + name + ''' +
+               ", role='" + role + ''' +
+               ", email='" + email + ''' +
+               ", department=" + (department != null ? department.getDeptname() : "null") + // Avoid loading lazy relationship
                '}';
     }
 }

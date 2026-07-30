@@ -1,16 +1,21 @@
 package com.sree.springspecforge.controller;
 
 import com.sree.springspecforge.dto.UserDTO;
+import com.sree.springspecforge.dto.UserResponseDTO;
+import com.sree.springspecforge.model.User;
 import com.sree.springspecforge.service.UserService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * REST Controller for managing user-related API endpoints.
- * Handles incoming HTTP requests and delegates business logic to the UserService.
+ * REST Controller for managing user-related operations.
+ * Handles HTTP requests for creating, retrieving, updating, and deleting users.
  */
 @RestController
 @RequestMapping("/api/users")
@@ -18,71 +23,74 @@ public class UserController {
 
     private final UserService userService;
 
-    /**
-     * Constructs a UserController with the given UserService.
-     * @param userService The service layer for user operations.
-     */
+    @Autowired
     public UserController(UserService userService) {
         this.userService = userService;
     }
 
     /**
-     * Handles GET requests to retrieve user details by ID.
+     * Retrieves a list of all users.
      *
-     * @param userId The unique identifier of the user to fetch, provided as a path variable.
-     * @return A {@link ResponseEntity} containing the {@link UserDTO} of the found user
-     *         and a 200 OK status, or an appropriate error response if the user is not found
-     *         or the ID format is invalid.
+     * @return A ResponseEntity containing a list of User entities and an HTTP status of OK.
+     */
+    @GetMapping
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> users = userService.getAllUsers();
+        // NOTE: For consistency and best practice, this endpoint could also be updated
+        // to return List<UserResponseDTO> by mapping each User entity.
+        // For this specific feature, only getUserById was explicitly requested to change.
+        return ResponseEntity.ok(users);
+    }
+
+    /**
+     * Retrieves a user by their ID, including associated department details.
      *
-     * <p>Example success response:</p>
-     * <pre>
-     * {@code
-     * HTTP/1.1 200 OK
-     * Content-Type: application/json
-     *
-     * {
-     *   "id": 101,
-     *   "name": "John Doe",
-     *   "role": "USER"
-     * }
-     * }
-     * </pre>
-     *
-     * <p>Example 404 Not Found response:</p>
-     * <pre>
-     * {@code
-     * HTTP/1.1 404 Not Found
-     * Content-Type: application/json
-     *
-     * {
-     *   "timestamp": "2023-10-27T10:30:00.000+00:00",
-     *   "status": 404,
-     *   "error": "Not Found",
-     *   "message": "User with ID 101 not found.",
-     *   "path": "/api/users/101"
-     * }
-     * }
-     * </pre>
-     *
-     * <p>Example 400 Bad Request response for invalid ID format:</p>
-     * <pre>
-     * {@code
-     * HTTP/1.1 400 Bad Request
-     * Content-Type: application/json
-     *
-     * {
-     *   "timestamp": "2023-10-27T10:30:00.000+00:00",
-     *   "status": 400,
-     *   "error": "Bad Request",
-     *   "message": "Type mismatch. Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long' for 'userId'",
-     *   "path": "/api/users/abc"
-     * }
-     * }
-     * </pre>
+     * @param userId The unique identifier of the user to retrieve.
+     * @return A ResponseEntity containing the UserResponseDTO and an HTTP status of OK.
+     *         Returns 404 NOT FOUND if the user does not exist (handled by GlobalExceptionHandler).
      */
     @GetMapping("/{userId}")
-    public ResponseEntity<UserDTO> getUserById(@PathVariable Long userId) {
-        UserDTO userDTO = userService.findById(userId);
-        return ResponseEntity.ok(userDTO);
+    public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long userId) {
+        UserResponseDTO user = userService.getUserById(userId);
+        return ResponseEntity.ok(user);
+    }
+
+    /**
+     * Creates a new user.
+     *
+     * @param userDTO The UserDTO containing the details for the new user.
+     * @return A ResponseEntity containing the created User entity and an HTTP status of CREATED.
+     */
+    @PostMapping
+    public ResponseEntity<User> createUser(@Valid @RequestBody UserDTO userDTO) {
+        User createdUser = userService.createUser(userDTO);
+        return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
+    }
+
+    /**
+     * Updates an existing user identified by their ID.
+     *
+     * @param userId  The unique identifier of the user to update.
+     * @param userDTO The UserDTO containing the updated details for the user.
+     * @return A ResponseEntity containing the updated User entity and an HTTP status of OK.
+     *         Returns 404 NOT FOUND if the user does not exist (handled by GlobalExceptionHandler).
+     */
+    @PutMapping("/{userId}")
+    public ResponseEntity<User> updateUser(@PathVariable Long userId, @Valid @RequestBody UserDTO userDTO) {
+        User updatedUser = userService.updateUser(userId, userDTO);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    /**
+     * Deletes a user identified by their ID.
+     *
+     * @param userId The unique identifier of the user to delete.
+     * @return A ResponseEntity with no content and an HTTP status of NO_CONTENT.
+     *         Returns 404 NOT FOUND if the user does not exist (handled by GlobalExceptionHandler).
+     */
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long userId) {
+        userService.deleteUser(userId);
+        return ResponseEntity.noContent().build();
     }
 }

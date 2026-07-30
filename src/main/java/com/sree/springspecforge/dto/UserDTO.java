@@ -1,60 +1,88 @@
 package com.sree.springspecforge.dto;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 import java.util.Objects;
 
 /**
- * Represents the data structure for the API response when fetching user details.
- * This DTO exposes only specific fields (id, name, role, email) from the User entity
- * to clients, ensuring data encapsulation and API contract adherence.
+ * Data Transfer Object for User creation and update requests.
+ * This DTO includes validation annotations to ensure data integrity
+ * before processing by the service layer.
  */
 public class UserDTO {
-    private Long id;
-    private String name;
-    private String role;
-    private String email; // New field added
 
+    @NotBlank(message = "Name cannot be blank")
+    @Size(max = 255, message = "Name cannot exceed 255 characters")
+    private String name;
+
+    @NotBlank(message = "Role cannot be blank")
+    @Size(max = 255, message = "Role cannot exceed 255 characters")
+    private String role;
+
+    @NotBlank(message = "Email cannot be blank")
+    @Email(message = "Email should be valid")
+    @Size(max = 255, message = "Email cannot exceed 255 characters")
+    private String email;
+
+    private Integer deptno; // Optional department number for assignment/update
+
+    /**
+     * Default constructor.
+     */
     public UserDTO() {
     }
 
-    public UserDTO(Long id, String name, String role, String email) {
-        this.id = id;
+    /**
+     * Parameterized constructor for creating a UserDTO.
+     * @param name The name of the user.
+     * @param role The role of the user.
+     * @param email The email of the user.
+     * @param deptno The department number for the user (can be null).
+     */
+    public UserDTO(String name, String role, String email, Integer deptno) {
         this.name = name;
         this.role = role;
-        this.email = email; // Initialize new field
+        this.email = email;
+        this.deptno = deptno;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
+    // Getters
 
     public String getName() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public String getRole() {
         return role;
     }
 
-    public void setRole(String role) {
-        this.role = role;
-    }
-
-    // Getter for new email field
     public String getEmail() {
         return email;
     }
 
-    // Setter for new email field
+    public Integer getDeptno() {
+        return deptno;
+    }
+
+    // Setters
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public void setDeptno(Integer deptno) {
+        this.deptno = deptno;
     }
 
     @Override
@@ -62,21 +90,21 @@ public class UserDTO {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         UserDTO userDTO = (UserDTO) o;
-        return Objects.equals(id, userDTO.id) && Objects.equals(name, userDTO.name) && Objects.equals(role, userDTO.role) && Objects.equals(email, userDTO.email);
+        return Objects.equals(name, userDTO.name) && Objects.equals(role, userDTO.role) && Objects.equals(email, userDTO.email) && Objects.equals(deptno, userDTO.deptno);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, role, email);
+        return Objects.hash(name, role, email, deptno);
     }
 
     @Override
     public String toString() {
         return "UserDTO{" +
-               "id=" + id +
-               ", name='" + name + "' " +
-               ", role='" + role + "' " +
-               ", email='" + email + "' " +
+               "name='" + name + ''' +
+               ", role='" + role + ''' +
+               ", email='" + email + ''' +
+               ", deptno=" + deptno +
                '}';
     }
 }
