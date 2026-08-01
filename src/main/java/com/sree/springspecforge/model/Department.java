@@ -1,113 +1,71 @@
 package com.sree.springspecforge.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.math.BigDecimal;
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Represents a Department entity in the system.
- * This entity maps to the 'dept' table in the database.
+ * This entity maps to the 'departments' table in the database.
  */
+@Data // Includes @Getter, @Setter, @ToString
+@NoArgsConstructor
+@AllArgsConstructor // Will generate constructor for all fields
+@EqualsAndHashCode(of = "id") // Only ID for equals/hashCode for entity consistency
 @Entity
-@Table(name = "dept")
+@Table(name = "departments") // Renamed table from 'dept' to 'departments'
 public class Department {
 
     @Id
-    @Column(name = "deptno")
-    private Integer deptno;
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id; // Changed from Integer deptno to UUID id
 
-    @Column(name = "deptname", nullable = false)
-    private String deptname;
+    @Column(name = "name", nullable = false, unique = true) // Changed from deptname to name
+    private String name;
 
-    @Column(name = "location", nullable = false)
-    private String location; // New column: location
+    @Column(name = "location") // Assuming location can be nullable if not explicitly required
+    private String location;
 
-    @Column(name = "salary", nullable = false, precision = 10, scale = 2)
-    private BigDecimal salary; // New column: salary
+    @Column(name = "salary", precision = 19, scale = 2) // Added/Updated salary field
+    private BigDecimal salary;
 
-    /**
-     * Default constructor for JPA.
-     */
-    public Department() {
-    }
+    // Bidirectional relationship with User
+    // Use mappedBy to indicate the owning side is in User entity (user.department)
+    @OneToMany(mappedBy = "department", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<User> users = new ArrayList<>();
 
-    /**
-     * Parameterized constructor to create a Department instance.
-     * @param deptno The unique department number.
-     * @param deptname The name of the department.
-     * @param location The location of the department.
-     * @param salary The salary associated with the department.
-     */
-    public Department(Integer deptno, String deptname, String location, BigDecimal salary) {
-        this.deptno = deptno;
-        this.deptname = deptname;
+    // Custom constructor excluding the 'users' list if needed,
+    // or rely on Lombok @AllArgsConstructor for full constructor.
+    // For DTO mapping and entity creation, often a constructor for fields is useful.
+    public Department(UUID id, String name, String location, BigDecimal salary) {
+        this.id = id;
+        this.name = name;
         this.location = location;
         this.salary = salary;
     }
 
-    // Getters
-
-    public Integer getDeptno() {
-        return deptno;
+    // Helper methods for managing the bidirectional relationship with User
+    public void addUser(User user) {
+        if (user != null && !this.users.contains(user)) {
+            this.users.add(user);
+            user.setDepartment(this); // Ensures bidirectional link
+        }
     }
 
-    public String getDeptname() {
-        return deptname;
-    }
-
-    public String getLocation() {
-        return location;
-    }
-
-    public BigDecimal getSalary() {
-        return salary;
-    }
-
-    // Setters
-
-    public void setDeptno(Integer deptno) {
-        this.deptno = deptno;
-    }
-
-    public void setDeptname(String deptname) {
-        this.deptname = deptname;
-    }
-
-    public void setLocation(String location) {
-        this.location = location;
-    }
-
-    public void setSalary(BigDecimal salary) {
-        this.salary = salary;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Department that = (Department) o;
-        return Objects.equals(deptno, that.deptno) &&
-               Objects.equals(deptname, that.deptname) &&
-               Objects.equals(location, that.location) &&
-               Objects.equals(salary, that.salary);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(deptno, deptname, location, salary);
-    }
-
-    @Override
-    public String toString() {
-        return "Department{" +
-               "deptno=" + deptno +
-               ", deptname='" + deptname + '\'' +
-               ", location='" + location + '\'' +
-               ", salary=" + salary +
-               '}';
+    public void removeUser(User user) {
+        if (user != null && this.users.contains(user)) {
+            this.users.remove(user);
+            user.setDepartment(null); // Ensures bidirectional link
+        }
     }
 }

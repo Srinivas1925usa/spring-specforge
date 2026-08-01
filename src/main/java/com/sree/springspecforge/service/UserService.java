@@ -1,176 +1,204 @@
 package com.sree.springspecforge.service;
 
 import com.sree.springspecforge.dto.AddressDTO;
+import com.sree.springspecforge.dto.DepartmentDTO;
 import com.sree.springspecforge.dto.UserDTO;
 import com.sree.springspecforge.dto.UserResponseDTO;
-import com.sree.springspecforge.exception.UserNotFoundException;
+import com.sree.springspecforge.exception.ResourceNotFoundException;
 import com.sree.springspecforge.model.Address;
 import com.sree.springspecforge.model.Department;
 import com.sree.springspecforge.model.User;
 import com.sree.springspecforge.repository.DepartmentRepository;
 import com.sree.springspecforge.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.UUID;
 
-/**
- * Service layer for managing User entities.
- * Provides business logic for CRUD operations on users.
- */
 @Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserService {
 
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
 
-    @Autowired
-    public UserService(UserRepository userRepository, DepartmentRepository departmentRepository) {
-        this.userRepository = userRepository;
-        this.departmentRepository = departmentRepository;
-    }
-
     /**
-     * Retrieves all users from the database.
-     * Department and address are loaded via {@code @EntityGraph} on {@link UserRepository#findAll()}.
+     * Retrieves a user by their unique identifier.
      *
-     * @return A list of all User entities.
+     * @param id The UUID of the user to retrieve.
+     * @return UserResponseDTO containing the user's details.
+     * @throws ResourceNotFoundException if the user with the given ID is not found.
      */
-    @Transactional(readOnly = true)
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public UserResponseDTO getUserById(UUID id) {
+        log.debug("Fetching user with ID: {}", id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + id));
+        return mapToUserResponseDTO(user);
     }
 
     /**
-     * Retrieves a user by their ID, including department and address details, and maps it to a DTO.
-     * Uses {@code UserRepository.findById} which has an {@code @EntityGraph} to fetch
-     * department and address, preventing {@code LazyInitializationException}.
+     * Retrieves all users with pagination.
      *
-     * @param userId The ID of the user to retrieve.
-     * @return A UserResponseDTO containing the user, department, and optional address details.
-     * @throws UserNotFoundException If no user with the given ID is found.
+     * @param pageable Pagination information.
+     * @return A page of UserResponseDTOs.
      */
-    @Transactional(readOnly = true)
-    public UserResponseDTO getUserById(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
-
-        // Map User entity to UserResponseDTO (null-safe department)
-        Integer deptno = (user.getDepartment() != null) ? user.getDepartment().getDeptno() : null;
-        String deptname = (user.getDepartment() != null) ? user.getDepartment().getDeptname() : null;
-
-        // Map nested address (null if no address is linked)
-        AddressDTO addressDTO = mapAddressToDto(user.getAddress());
-
-        return new UserResponseDTO(
-                user.getId(),
-                user.getName(),
-                user.getRole(),
-                user.getEmail(),
-                deptno,
-                deptname,
-                addressDTO
-        );
+    public Page<UserResponseDTO> getAllUsers(Pageable pageable) {
+        log.debug("Fetching all users with pagination: {}", pageable);
+        return userRepository.findAll(pageable)
+                .map(this::mapToUserResponseDTO);
     }
 
     /**
-     * Creates a new user based on the provided UserDTO.
-     * Allows assigning a department using {@code deptno} in the DTO.
+     * Creates a new user.
      *
-     * @param userDTO The DTO containing the user's details.
-     * @return The created User entity.
-     * @throws IllegalArgumentException If the provided department ID is invalid.
+     * @param userDTO User data for creation.
+     * @return UserResponseDTO of the created user.
      */
     @Transactional
-    public User createUser(UserDTO userDTO) {
+    public UserResponseDTO createUser(UserDTO userDTO) {
+        log.info("Creating new user with email: {}", userDTO.getEmail());
         User user = new User();
-        user.setName(userDTO.getName());
-        user.setRole(userDTO.getRole());
+        user.setFirstName(userDTO.getFirstName());
+        user.setLastName(userDTO.getLastName());
         user.setEmail(userDTO.getEmail());
+        // createdAt and updatedAt are handled by AuditingEntityListener
+        // Salary is now derived from Department, so not set directly on User.
 
-        if (userDTO.getDeptno() != null) {
-            Department department = departmentRepository.findById(userDTO.getDeptno())
-                    .orElseThrow(() -> new IllegalArgumentException("Invalid department ID: " + userDTO.getDeptno()));
+        // Handle address if present
+        if (userDTO.getAddress() != null) {
+            Address address = new Address();
+            address.setStreet(userDTO.getAddress().getStreet());
+            address.setCity(userDTO.getAddress().getCity());
+            address.setState(userDTO.getAddress().getState());
+            address.setZipCode(userDTO.getAddress().getZipCode());
+            user.setAddress(address); // Set bidirectionality
+        }
+
+        // Handle department if present
+        if (userDTO.getDepartmentId() != null) {
+            Department department = departmentRepository.findById(userDTO.getDepartmentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + userDTO.getDepartmentId()));
             user.setDepartment(department);
         }
 
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        log.info("User created successfully with ID: {}", savedUser.getId());
+        return mapToUserResponseDTO(savedUser);
     }
 
     /**
-     * Updates an existing user with the details from the provided UserDTO.
-     * Allows updating or unassigning a user's department using {@code deptno} in the DTO.
+     * Updates an existing user.
      *
-     * @param userId  The ID of the user to update.
-     * @param userDTO The DTO containing the updated user details.
-     * @return The updated User entity.
-     * @throws UserNotFoundException    If no user with the given ID is found.
-     * @throws IllegalArgumentException If the provided department ID is invalid.
+     * @param id      The UUID of the user to update.
+     * @param userDTO New user data.
+     * @return UserResponseDTO of the updated user.
+     * @throws ResourceNotFoundException if the user with the given ID is not found.
      */
     @Transactional
-    public User updateUser(Long userId, UserDTO userDTO) {
-        return userRepository.findById(userId)
-                .map(existingUser -> {
-                    existingUser.setName(userDTO.getName());
-                    existingUser.setRole(userDTO.getRole());
-                    existingUser.setEmail(userDTO.getEmail());
+    public UserResponseDTO updateUser(UUID id, UserDTO userDTO) {
+        log.info("Updating user with ID: {}", id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + id));
 
-                    if (userDTO.getDeptno() != null) {
-                        Department department = departmentRepository.findById(userDTO.getDeptno())
-                                .orElseThrow(() -> new IllegalArgumentException("Invalid department ID: " + userDTO.getDeptno()));
-                        existingUser.setDepartment(department);
-                    } else {
-                        existingUser.setDepartment(null); // Allow unassigning department
-                    }
+        user.setFirstName(userDTO.getFirstName());
+        user.setLastName(userDTO.getLastName());
+        user.setEmail(userDTO.getEmail());
+        // Salary is derived from Department, so not set directly on User.
 
-                    return userRepository.save(existingUser);
-                })
-                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+        // Update address if present
+        if (userDTO.getAddress() != null) {
+            if (user.getAddress() == null) {
+                user.setAddress(new Address());
+            }
+            user.getAddress().setStreet(userDTO.getAddress().getStreet());
+            user.getAddress().setCity(userDTO.getAddress().getCity());
+            user.getAddress().setState(userDTO.getAddress().getState());
+            user.getAddress().setZipCode(userDTO.getAddress().getZipCode());
+        } else if (user.getAddress() != null) {
+            // If address is removed from DTO, remove it from entity
+            user.setAddress(null);
+        }
+
+        // Update department if present.
+        if (userDTO.getDepartmentId() != null) {
+            Department department = departmentRepository.findById(userDTO.getDepartmentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + userDTO.getDepartmentId()));
+            user.setDepartment(department);
+        } else {
+            user.setDepartment(null); // Allow unassigning department
+        }
+
+        User updatedUser = userRepository.save(user);
+        log.info("User with ID: {} updated successfully.", updatedUser.getId());
+        return mapToUserResponseDTO(updatedUser);
     }
 
     /**
-     * Deletes a user from the database by their ID.
-     * Cascades to the linked Address (orphanRemoval / CascadeType.ALL on User.address).
+     * Deletes a user by their unique identifier.
      *
-     * @param userId The ID of the user to delete.
-     * @throws UserNotFoundException If no user with the given ID is found.
+     * @param id The UUID of the user to delete.
+     * @throws ResourceNotFoundException if the user with the given ID is not found.
      */
     @Transactional
-    public void deleteUser(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new UserNotFoundException("User not found with ID: " + userId);
+    public void deleteUser(UUID id) {
+        log.info("Deleting user with ID: {}", id);
+        if (!userRepository.existsById(id)) {
+            throw new ResourceNotFoundException("User not found with ID: " + id);
         }
-        userRepository.deleteById(userId);
+        userRepository.deleteById(id);
+        log.info("User with ID: {} deleted successfully.", id);
     }
 
     /**
-     * Returns the total number of user records in the database.
+     * Maps a User entity to a UserResponseDTO.
      *
-     * @return total user count
+     * @param user The User entity to map.
+     * @return The corresponding UserResponseDTO.
      */
-    @Transactional(readOnly = true)
-    public long getTotalUserCount() {
-        return userRepository.count();
-    }
+    private UserResponseDTO mapToUserResponseDTO(User user) {
+        UserResponseDTO.UserResponseDTOBuilder builder = UserResponseDTO.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt());
 
-    /**
-     * Null-safe mapping from Address entity to AddressDTO.
-     *
-     * @param address the address entity, may be null
-     * @return mapped DTO, or null if address is null
-     */
-    private AddressDTO mapAddressToDto(Address address) {
-        if (address == null) {
-            return null;
+        // Derive top-level salary from the associated Department
+        if (user.getDepartment() != null) {
+            builder.salary(user.getDepartment().getSalary());
+        } else {
+            builder.salary(null); // Explicitly set to null if no department or salary
         }
-        return new AddressDTO(
-                address.getId(),
-                address.getStreet(),
-                address.getCity(),
-                address.getState(),
-                address.getZipCode(),
-                address.getCountry()
-        );
+
+        // Map address if present
+        if (user.getAddress() != null) {
+            builder.address(AddressDTO.builder()
+                    .id(user.getAddress().getId())
+                    .street(user.getAddress().getStreet())
+                    .city(user.getAddress().getCity())
+                    .state(user.getAddress().getState())
+                    .zipCode(user.getAddress().getZipCode())
+                    .build());
+        }
+
+        // Map department if present, including its salary
+        if (user.getDepartment() != null) {
+            builder.department(DepartmentDTO.builder()
+                    .id(user.getDepartment().getId())
+                    .name(user.getDepartment().getName())
+                    .location(user.getDepartment().getLocation())
+                    .salary(user.getDepartment().getSalary()) // Map department's salary
+                    .build());
+        }
+
+        return builder.build();
     }
 }
