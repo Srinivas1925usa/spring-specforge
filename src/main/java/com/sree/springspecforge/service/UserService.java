@@ -145,6 +145,16 @@ public class UserService {
     }
 
     /**
+     * Returns the total number of user records in the database.
+     *
+     * @return total user count
+     */
+    @Transactional(readOnly = true)
+    public long getTotalUserCount() {
+        return userRepository.count();
+    }
+
+    /**
      * Null-safe mapping from Address entity to AddressDTO.
      *
      * @param address the address entity, may be null
