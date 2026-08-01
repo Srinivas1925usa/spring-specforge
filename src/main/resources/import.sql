@@ -3,10 +3,10 @@
 -- These commands will be executed on startup if spring.sql.init.mode is 'always'
 -- and spring.jpa.hibernate.ddl-auto is suitable (e.g., 'create', 'create-drop', or 'update' for existing tables).
 
--- Insert sample departments
-INSERT INTO dept (deptno, deptname) VALUES (10, 'Engineering');
-INSERT INTO dept (deptno, deptname) VALUES (20, 'HR');
-INSERT INTO dept (deptno, deptname) VALUES (30, 'Marketing');
+-- Insert sample departments (include location + salary required by entity schema)
+INSERT INTO dept (deptno, deptname, location, salary) VALUES (10, 'Engineering', 'San Francisco', 10000.00);
+INSERT INTO dept (deptno, deptname, location, salary) VALUES (20, 'HR', 'New York', 10000.00);
+INSERT INTO dept (deptno, deptname, location, salary) VALUES (30, 'Marketing', 'Chicago', 10000.00);
 
 -- Insert sample users (ensure IDs match existing expectations for updates)
 INSERT INTO users (id, name, role, email, deptno) VALUES (101, 'John Doe', 'USER', 'john.doe@example.com', 10);
