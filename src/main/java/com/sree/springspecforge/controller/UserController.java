@@ -2,117 +2,100 @@ package com.sree.springspecforge.controller;
 
 import com.sree.springspecforge.dto.UserDTO;
 import com.sree.springspecforge.dto.UserResponseDTO;
-import com.sree.springspecforge.model.User;
 import com.sree.springspecforge.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.UUID;
 
-/**
- * REST Controller for managing user-related operations.
- * Handles HTTP requests for creating, retrieving, updating, and deleting users.
- * <p>
- * {@code GET /api/users/{userId}} returns {@link UserResponseDTO} including
- * department fields and nested address details when present.
- * </p>
- */
 @RestController
 @RequestMapping("/api/users")
+@RequiredArgsConstructor
+@Tag(name = "User Management", description = "APIs for managing users")
 public class UserController {
 
     private final UserService userService;
 
-    @Autowired
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
-
-    /**
-     * Retrieves a list of all users.
-     *
-     * @return A ResponseEntity containing a list of User entities and an HTTP status of OK.
-     */
-    @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
-        List<User> users = userService.getAllUsers();
-        // NOTE: For consistency and best practice, this endpoint could also be updated
-        // to return List<UserResponseDTO> by mapping each User entity.
-        // For this specific feature, only getUserById was explicitly requested to change.
-        return ResponseEntity.ok(users);
-    }
-
-    /**
-     * Returns the total number of user records in the database.
-     * Declared before {@code /{userId}} so {@code count} is not treated as a path variable.
-     *
-     * @return total user count with HTTP 200
-     */
-    @GetMapping("/count")
-    public ResponseEntity<Long> getTotalUserCount() {
-        return ResponseEntity.ok(userService.getTotalUserCount());
-    }
-
-    /**
-     * Retrieves a user by their ID, including associated department and address details.
-     *
-     * @param userId The unique identifier of the user to retrieve.
-     * @return A ResponseEntity containing the UserResponseDTO and an HTTP status of OK.
-     *         Address is null when the user has no linked address.
-     *         Returns 404 NOT FOUND if the user does not exist (handled by GlobalExceptionHandler).
-     */
-    @GetMapping("/{userId}")
-    public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long userId) {
-        UserResponseDTO user = userService.getUserById(userId);
+    @Operation(summary = "Get a user by ID", description = "Retrieve a user's details by their unique identifier, including salary derived from their department.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User found",
+                    content = @Content(schema = @Schema(implementation = UserResponseDTO.class))),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @GetMapping("/{id}")
+    public ResponseEntity<UserResponseDTO> getUserById(
+            @Parameter(description = "UUID of the user to be retrieved", required = true)
+            @PathVariable UUID id) {
+        UserResponseDTO user = userService.getUserById(id);
         return ResponseEntity.ok(user);
     }
 
-    /**
-     * Creates a new user.
-     *
-     * @param userDTO The UserDTO containing the details for the new user.
-     * @return A ResponseEntity containing the created User entity and an HTTP status of CREATED.
-     */
+    @Operation(summary = "Get all users", description = "Retrieve a paginated list of all users, including salary derived from their department.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "List of users retrieved successfully",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = UserResponseDTO.class)))),
+    })
+    @GetMapping
+    public ResponseEntity<Page<UserResponseDTO>> getAllUsers(Pageable pageable) {
+        Page<UserResponseDTO> users = userService.getAllUsers(pageable);
+        return ResponseEntity.ok(users);
+    }
+
+    @Operation(summary = "Create a new user", description = "Adds a new user to the system. Department can be associated via departmentId.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "User created successfully",
+                    content = @Content(schema = @Schema(implementation = UserResponseDTO.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid user data provided"),
+            @ApiResponse(responseCode = "404", description = "Associated department not found")
+    })
     @PostMapping
-    public ResponseEntity<User> createUser(@Valid @RequestBody UserDTO userDTO) {
-        User createdUser = userService.createUser(userDTO);
+    public ResponseEntity<UserResponseDTO> createUser(
+            @Parameter(description = "User details for creation", required = true)
+            @Valid @RequestBody UserDTO userDTO) {
+        UserResponseDTO createdUser = userService.createUser(userDTO);
         return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
     }
 
-    /**
-     * Updates an existing user identified by their ID.
-     *
-     * @param userId  The unique identifier of the user to update.
-     * @param userDTO The UserDTO containing the updated details for the user.
-     * @return A ResponseEntity containing the updated User entity and an HTTP status of OK.
-     *         Returns 404 NOT FOUND if the user does not exist (handled by GlobalExceptionHandler).
-     */
-    @PutMapping("/{userId}")
-    public ResponseEntity<User> updateUser(@PathVariable Long userId, @Valid @RequestBody UserDTO userDTO) {
-        User updatedUser = userService.updateUser(userId, userDTO);
+    @Operation(summary = "Update an existing user", description = "Updates details of a user identified by their ID. Department can be updated or unassigned.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User updated successfully",
+                    content = @Content(schema = @Schema(implementation = UserResponseDTO.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid user data provided"),
+            @ApiResponse(responseCode = "404", description = "User or associated department not found")
+    })
+    @PutMapping("/{id}")
+    public ResponseEntity<UserResponseDTO> updateUser(
+            @Parameter(description = "UUID of the user to be updated", required = true)
+            @PathVariable UUID id,
+            @Parameter(description = "Updated user details", required = true)
+            @Valid @RequestBody UserDTO userDTO) {
+        UserResponseDTO updatedUser = userService.updateUser(id, userDTO);
         return ResponseEntity.ok(updatedUser);
     }
 
-    /**
-     * Deletes a user identified by their ID.
-     *
-     * @param userId The unique identifier of the user to delete.
-     * @return A ResponseEntity with no content and an HTTP status of NO_CONTENT.
-     *         Returns 404 NOT FOUND if the user does not exist (handled by GlobalExceptionHandler).
-     */
-    @DeleteMapping("/{userId}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long userId) {
-        userService.deleteUser(userId);
+    @Operation(summary = "Delete a user", description = "Removes a user from the system by their ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "User deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(
+            @Parameter(description = "UUID of the user to be deleted", required = true)
+            @PathVariable UUID id) {
+        userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
 }

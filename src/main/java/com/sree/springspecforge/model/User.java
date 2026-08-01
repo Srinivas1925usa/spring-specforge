@@ -1,130 +1,58 @@
 package com.sree.springspecforge.model;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.GenericGenerator;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.util.Objects;
+import java.time.Instant;
+import java.util.UUID;
 
-/**
- * Represents the persistence model of a user in the database.
- * This entity stores user-related data, including sensitive fields like email
- * that might not be exposed directly via API DTOs.
- * <p>
- * Associations:
- * <ul>
- *   <li>{@link Department} — Many-to-One (optional), FK {@code users.deptno}</li>
- *   <li>{@link Address} — One-to-One inverse side; Address owns FK {@code address.user_id}.
- *       CascadeType.ALL + orphanRemoval=true so the address lifecycle follows the user.</li>
- * </ul>
- * </p>
- */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
-@Table(name = "users") // Renamed to 'users' to avoid potential SQL keyword conflicts with 'user'
+@Table(name = "users")
+@EntityListeners(AuditingEntityListener.class)
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
-    @Column(nullable = false)
-    private String name;
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
 
-    @Column(nullable = false)
-    private String role; // e.g., 'ADMIN', 'USER', 'GUEST'
+    @Column(name = "last_name", nullable = false)
+    private String lastName;
 
-    @Column(nullable = false, unique = true)
-    private String email; // Potentially other fields not exposed via DTO
+    @Column(name = "email", nullable = false, unique = true)
+    private String email;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "deptno") // This maps to the deptno column in the users table
-    private Department department;
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
-    /**
-     * Inverse side of the User ↔ Address One-to-One.
-     * Owning side is {@link Address#user} ({@code address.user_id}).
-     * CascadeType.ALL + orphanRemoval=true: address is created/updated/deleted with the user.
-     */
-    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    // One-to-one relationship with Address
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     private Address address;
 
-    // Default constructor for JPA
-    public User() {
-    }
+    // Many-to-one relationship with Department
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id") // This now correctly points to UUID Department.id
+    private Department department;
 
-    public User(Long id, String name, String role, String email) {
-        this.id = id;
-        this.name = name;
-        this.role = role;
-        this.email = email;
-    }
-
-    // Constructor including department
-    public User(Long id, String name, String role, String email, Department department) {
-        this.id = id;
-        this.name = name;
-        this.role = role;
-        this.email = email;
-        this.department = department;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public Department getDepartment() {
-        return department;
-    }
-
-    public void setDepartment(Department department) {
-        this.department = department;
-    }
-
-    public Address getAddress() {
-        return address;
-    }
-
-    /**
-     * Sets the address and maintains bidirectional consistency on the owning side.
-     *
-     * @param address the address to associate, or null to clear
-     */
+    // Helper methods for relationships to ensure bidirectionality and prevent orphan records
     public void setAddress(Address address) {
         if (address == null) {
             if (this.address != null) {
@@ -136,34 +64,15 @@ public class User {
         this.address = address;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
+    public void setDepartment(Department department) {
+        // Remove from old department if exists
+        if (this.department != null && this.department.getUsers().contains(this)) {
+            this.department.getUsers().remove(this);
         }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
+        this.department = department;
+        // Add to new department
+        if (department != null && !department.getUsers().contains(this)) {
+            department.getUsers().add(this);
         }
-        User user = (User) o;
-        return Objects.equals(id, user.id); // For entities, typically only ID is used for equals/hashCode
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id); // For entities, typically only ID is used for equals/hashCode
-    }
-
-    @Override
-    public String toString() {
-        return "User{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", role='" + role + '\'' +
-                ", email='" + email + '\'' +
-                ", department=" + (department != null && org.hibernate.Hibernate.isInitialized(department)
-                        ? department.getDeptname() : "null") +
-                ", address=" + (address != null && org.hibernate.Hibernate.isInitialized(address)
-                        ? address.getId() : "null") +
-                '}';
     }
 }
