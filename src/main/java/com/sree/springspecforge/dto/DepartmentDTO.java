@@ -3,7 +3,6 @@ package com.sree.springspecforge.dto;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
@@ -104,8 +103,8 @@ public class DepartmentDTO {
     public String toString() {
         return "DepartmentDTO{" +
                "deptno=" + deptno +
-               ", deptname='" + deptname + ''' +
-               ", location='" + location + ''' +
+               ", deptname='" + deptname + '\'' +
+               ", location='" + location + '\'' +
                ", salary=" + salary +
                '}';
     }

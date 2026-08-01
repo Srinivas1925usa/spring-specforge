@@ -105,8 +105,8 @@ public class Department {
     public String toString() {
         return "Department{" +
                "deptno=" + deptno +
-               ", deptname='" + deptname + ''' +
-               ", location='" + location + ''' +
+               ", deptname='" + deptname + '\'' +
+               ", location='" + location + '\'' +
                ", salary=" + salary +
                '}';
     }

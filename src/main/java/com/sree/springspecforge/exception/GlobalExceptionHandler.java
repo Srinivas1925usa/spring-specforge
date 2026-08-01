@@ -38,6 +38,24 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles NotFoundException (e.g. missing department), returning a 404 Not Found status.
+     *
+     * @param ex The NotFoundException instance.
+     * @param request The HTTP servlet request.
+     * @return A ResponseEntity containing an ErrorResponse with 404 status.
+     */
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFoundException(NotFoundException ex, HttpServletRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    /**
      * Handles bean validation failures from {@code @Valid} request bodies.
      *
      * @param ex The MethodArgumentNotValidException instance.

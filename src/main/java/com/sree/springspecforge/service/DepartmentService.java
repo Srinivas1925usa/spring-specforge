@@ -64,7 +64,7 @@ public class DepartmentService {
      * @return The created DepartmentDTO.
      */
     @Transactional
-    public DepartmentDTO createDepartment(@Valid DepartmentDTO departmentDTO) {
+    public DepartmentDTO createDepartment(DepartmentDTO departmentDTO) {
         Department department = convertToEntity(departmentDTO);
         
         // Handle default salary for creation
