@@ -4,7 +4,9 @@
 
 CREATE TABLE IF NOT EXISTS dept (
     deptno INT PRIMARY KEY,
-    deptname VARCHAR(255) NOT NULL
+    deptname VARCHAR(255) NOT NULL,
+    location VARCHAR(255) NOT NULL DEFAULT 'Unknown', -- New column: location with default value
+    salary DECIMAL(10, 2) NOT NULL DEFAULT 10000.00 -- New column: salary with default value
 );
 
 CREATE TABLE IF NOT EXISTS users (
