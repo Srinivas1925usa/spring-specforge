@@ -13,3 +13,8 @@ INSERT INTO users (id, name, role, email, deptno) VALUES (101, 'John Doe', 'USER
 INSERT INTO users (id, name, role, email, deptno) VALUES (102, 'Jane Smith', 'ADMIN', 'jane.smith@example.com', 20);
 INSERT INTO users (id, name, role, email, deptno) VALUES (103, 'Peter Jones', 'GUEST', 'peter.jones@example.com', 30);
 INSERT INTO users (id, name, role, email, deptno) VALUES (104, 'Alice Wonderland', 'USER', 'alice.w@example.com', NULL); -- User without a department
+
+-- Sample addresses linked One-to-One to users 101, 102, 103 (user 104 intentionally has no address)
+INSERT INTO address (street, city, state, zip_code, country, user_id) VALUES ('123 Tech Park', 'San Francisco', 'CA', '94105', 'USA', 101);
+INSERT INTO address (street, city, state, zip_code, country, user_id) VALUES ('456 HR Avenue', 'New York', 'NY', '10001', 'USA', 102);
+INSERT INTO address (street, city, state, zip_code, country, user_id) VALUES ('789 Market Street', 'Chicago', 'IL', '60601', 'USA', 103);

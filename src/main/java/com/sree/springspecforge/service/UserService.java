@@ -1,8 +1,10 @@
 package com.sree.springspecforge.service;
 
+import com.sree.springspecforge.dto.AddressDTO;
 import com.sree.springspecforge.dto.UserDTO;
 import com.sree.springspecforge.dto.UserResponseDTO;
 import com.sree.springspecforge.exception.UserNotFoundException;
+import com.sree.springspecforge.model.Address;
 import com.sree.springspecforge.model.Department;
 import com.sree.springspecforge.model.User;
 import com.sree.springspecforge.repository.DepartmentRepository;
@@ -21,7 +23,7 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final DepartmentRepository departmentRepository; // Inject DepartmentRepository
+    private final DepartmentRepository departmentRepository;
 
     @Autowired
     public UserService(UserRepository userRepository, DepartmentRepository departmentRepository) {
@@ -31,9 +33,7 @@ public class UserService {
 
     /**
      * Retrieves all users from the database.
-     * For consistency with the `getUserById` endpoint, this method could also return `List<UserResponseDTO>`.
-     * However, for now, it returns `List<User>` as per the original structure, noting that
-     * converting to DTOs for all endpoints is a best practice.
+     * Department and address are loaded via {@code @EntityGraph} on {@link UserRepository#findAll()}.
      *
      * @return A list of all User entities.
      */
@@ -43,12 +43,12 @@ public class UserService {
     }
 
     /**
-     * Retrieves a user by their ID, including department details, and maps it to a DTO.
-     * This method uses the `UserRepository.findById` which has an `@EntityGraph`
-     * to eagerly fetch the associated department, preventing `LazyInitializationException`.
+     * Retrieves a user by their ID, including department and address details, and maps it to a DTO.
+     * Uses {@code UserRepository.findById} which has an {@code @EntityGraph} to fetch
+     * department and address, preventing {@code LazyInitializationException}.
      *
      * @param userId The ID of the user to retrieve.
-     * @return A UserResponseDTO containing the user and department details.
+     * @return A UserResponseDTO containing the user, department, and optional address details.
      * @throws UserNotFoundException If no user with the given ID is found.
      */
     @Transactional(readOnly = true)
@@ -56,9 +56,12 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
 
-        // Map User entity to UserResponseDTO
+        // Map User entity to UserResponseDTO (null-safe department)
         Integer deptno = (user.getDepartment() != null) ? user.getDepartment().getDeptno() : null;
         String deptname = (user.getDepartment() != null) ? user.getDepartment().getDeptname() : null;
+
+        // Map nested address (null if no address is linked)
+        AddressDTO addressDTO = mapAddressToDto(user.getAddress());
 
         return new UserResponseDTO(
                 user.getId(),
@@ -66,13 +69,14 @@ public class UserService {
                 user.getRole(),
                 user.getEmail(),
                 deptno,
-                deptname
+                deptname,
+                addressDTO
         );
     }
 
     /**
      * Creates a new user based on the provided UserDTO.
-     * Allows assigning a department using `deptno` in the DTO.
+     * Allows assigning a department using {@code deptno} in the DTO.
      *
      * @param userDTO The DTO containing the user's details.
      * @return The created User entity.
@@ -96,7 +100,7 @@ public class UserService {
 
     /**
      * Updates an existing user with the details from the provided UserDTO.
-     * Allows updating or unassigning a user's department using `deptno` in the DTO.
+     * Allows updating or unassigning a user's department using {@code deptno} in the DTO.
      *
      * @param userId  The ID of the user to update.
      * @param userDTO The DTO containing the updated user details.
@@ -127,6 +131,7 @@ public class UserService {
 
     /**
      * Deletes a user from the database by their ID.
+     * Cascades to the linked Address (orphanRemoval / CascadeType.ALL on User.address).
      *
      * @param userId The ID of the user to delete.
      * @throws UserNotFoundException If no user with the given ID is found.
@@ -137,5 +142,25 @@ public class UserService {
             throw new UserNotFoundException("User not found with ID: " + userId);
         }
         userRepository.deleteById(userId);
+    }
+
+    /**
+     * Null-safe mapping from Address entity to AddressDTO.
+     *
+     * @param address the address entity, may be null
+     * @return mapped DTO, or null if address is null
+     */
+    private AddressDTO mapAddressToDto(Address address) {
+        if (address == null) {
+            return null;
+        }
+        return new AddressDTO(
+                address.getId(),
+                address.getStreet(),
+                address.getCity(),
+                address.getState(),
+                address.getZipCode(),
+                address.getCountry()
+        );
     }
 }

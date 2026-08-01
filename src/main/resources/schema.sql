@@ -15,3 +15,15 @@ CREATE TABLE IF NOT EXISTS users (
     deptno INT, -- New column for department
     CONSTRAINT fk_users_dept FOREIGN KEY (deptno) REFERENCES dept(deptno)
 );
+
+-- One-to-One address table: FK user_id → users.id with UNIQUE constraint
+CREATE TABLE IF NOT EXISTS address (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    street VARCHAR(255),
+    city VARCHAR(255),
+    state VARCHAR(255),
+    zip_code VARCHAR(50),
+    country VARCHAR(255),
+    user_id BIGINT NOT NULL UNIQUE,
+    CONSTRAINT fk_address_user FOREIGN KEY (user_id) REFERENCES users(id)
+);

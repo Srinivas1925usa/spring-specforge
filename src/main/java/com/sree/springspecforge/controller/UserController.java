@@ -22,6 +22,10 @@ import java.util.List;
 /**
  * REST Controller for managing user-related operations.
  * Handles HTTP requests for creating, retrieving, updating, and deleting users.
+ * <p>
+ * {@code GET /api/users/{userId}} returns {@link UserResponseDTO} including
+ * department fields and nested address details when present.
+ * </p>
  */
 @RestController
 @RequestMapping("/api/users")
@@ -49,10 +53,11 @@ public class UserController {
     }
 
     /**
-     * Retrieves a user by their ID, including associated department details.
+     * Retrieves a user by their ID, including associated department and address details.
      *
      * @param userId The unique identifier of the user to retrieve.
      * @return A ResponseEntity containing the UserResponseDTO and an HTTP status of OK.
+     *         Address is null when the user has no linked address.
      *         Returns 404 NOT FOUND if the user does not exist (handled by GlobalExceptionHandler).
      */
     @GetMapping("/{userId}")
