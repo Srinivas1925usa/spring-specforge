@@ -53,6 +53,17 @@ public class UserController {
     }
 
     /**
+     * Returns the total number of user records in the database.
+     * Declared before {@code /{userId}} so {@code count} is not treated as a path variable.
+     *
+     * @return total user count with HTTP 200
+     */
+    @GetMapping("/count")
+    public ResponseEntity<Long> getTotalUserCount() {
+        return ResponseEntity.ok(userService.getTotalUserCount());
+    }
+
+    /**
      * Retrieves a user by their ID, including associated department and address details.
      *
      * @param userId The unique identifier of the user to retrieve.
